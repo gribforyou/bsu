@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Регионы, Районы, Города</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .panel {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 10px;
+            max-height: 2500px;
+            overflow-y: auto;
+        }
+
+        .panel h3 {
+            margin-top: 0;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .list-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .list-item.selected {
+            background-color: #007cba;
+            color: white;
+        }
+
+        .list-item button {
+            margin-left: 10px;
+            padding: 2px 6px;
+            font-size: 0.8em;
+            color: white;
+            background-color: #d32f2f;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .list-item button:hover {
+            background-color: #b71c1c;
+        }
+
+        .pagination {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .pagination button {
+            padding: 5px 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        .form-container {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .form-container input, .form-container button {
+            margin: 5px 0;
+            width: 100%;
+        }
+
+        .form-container button[type="submit"] {
+            background-color: #007cba;
+            color: white;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        .form-container button[type="submit"]:hover {
+            background-color: #005a87;
+        }
+
+        .delete-warning {
+            color: #d32f2f;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+<h1>Регионы, Районы, Города</h1>
+<div class="container">
+    <!-- Регионы -->
+    <div class="panel">
+        <h3>Регионы</h3>
+        <div id="regions-list"></div>
+        <div class="pagination" id="regions-pagination"></div>
+
+        <div class="form-container">
+            <h4>Добавить и изменить регион</h4>
+            <input type="text" id="region-name" placeholder="Название региона" required/>
+            <input type="text" id="region-capital" placeholder="Столица региона" required/>
+            <button type="submit" onclick="addRegion()">Добавить регион</button>
+            <button type="submit" onclick="updateRegion()">Изменить регион</button>
+        </div>
+    </div>
+
+    <!-- Районы -->
+    <div class="panel">
+        <h3>Районы</h3>
+        <div id="districts-list"></div>
+        <div class="pagination" id="districts-pagination"></div>
+
+        <div class="form-container">
+            <h4>Добавить и изменить район</h4>
+            <input type="text" id="district-name" placeholder="Название района" required/>
+            <button type="submit" onclick="addDistrict()">Добавить район</button>
+            <button type="submit" onclick="updateDistrict()">Изменить район</button>
+        </div>
+    </div>
+
+    <!-- Города -->
+    <div class="panel">
+        <h3>Города</h3>
+        <table id="towns-table">
+            <thead>
+            <tr>
+                <th>Название</th>
+                <th>Тип</th>
+                <th>Население</th>
+                <th>Действия</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div class="form-container">
+            <h4>Добавить город</h4>
+            <input type="text" id="town-name" placeholder="Название города" required/>
+            <input type="text" id="town-type" placeholder="Тип (город, посёлок и т.д.)" required/>
+            <input type="number" id="town-population" placeholder="Население" min="0" required/>
+            <button type="submit" onclick="addTown()">Добавить город</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = '';
+
+    let selectedRegion = null;
+    let selectedDistrict = null;
+    let regionPage = 0;
+    let districtPage = 0;
+
+    function loadRegions(page = 0) {
+        fetch(`${API_BASE}/regions?page=${page}`)
+            .then(response => response.json())
+            .then(regions => {
+                const list = document.getElementById('regions-list');
+                const pagination = document.getElementById('regions-pagination');
+
+                if (regions.length === 0 && page !== 0) {
+                    alert('Нет известных регионов на этой странице.');
+                } else {
+                    list.innerHTML = '';
+                    pagination.innerHTML = '';
+
+                    regions.forEach(region => {
+                        const div = document.createElement('div');
+                        div.className = 'list-item';
+                        if (region.name === selectedRegion) {
+                            div.classList.add('selected');
+                        }
+                        div.innerHTML = `
+                            <span>${region.name}(${region.capitalName})</span>
+                            <button onclick="deleteRegion(event, '${region.name}')">Удалить</button>
+                        `;
+                        div.onclick = (e) => {
+                            if (e.target.tagName !== 'BUTTON') {
+                                document.querySelectorAll('#regions-list .selected').forEach(el => el.classList.remove('selected'));
+                                div.classList.add('selected');
+                                selectedRegion = region.name;
+                                selectedDistrict = null;
+                                districtPage = 0;
+                                loadDistricts(0);
+                                document.getElementById('towns-table').querySelector('tbody').innerHTML = '';
+                            }
+                        };
+                        list.appendChild(div);
+                    });
+
+                    const prevBtn = document.createElement('button');
+                    prevBtn.textContent = 'Назад';
+                    prevBtn.disabled = page === 0;
+                    prevBtn.onclick = () => loadRegions(page - 1);
+
+                    const nextBtn = document.createElement('button');
+                    nextBtn.textContent = 'Вперёд';
+                    nextBtn.onclick = () => loadRegions(page + 1);
+
+                    pagination.appendChild(prevBtn);
+                    pagination.appendChild(nextBtn);
+                }
+            })
+            .catch(err => console.error('Ошибка загрузки регионов:', err));
+    }
+
+    function loadDistricts(page = 0) {
+        if (!selectedRegion) {
+            document.getElementById('districts-list').innerHTML = '<div>Выберите регион</div>';
+            document.getElementById('districts-pagination').innerHTML = '';
+            return;
+        }
+
+        fetch(`${API_BASE}/districts?regionName=${encodeURIComponent(selectedRegion)}&page=${page}`)
+            .then(response => response.json())
+            .then(districts => {
+                const list = document.getElementById('districts-list');
+                const pagination = document.getElementById('districts-pagination');
+
+                if (districts.length === 0 && page !== 0) {
+                    alert('Нет известных районов на этой странице.');
+                } else {
+                    list.innerHTML = '';
+                    pagination.innerHTML = '';
+
+                    districts.forEach(district => {
+                        const div = document.createElement('div');
+                        div.className = 'list-item';
+                        if (district.name === selectedDistrict) {
+                            div.classList.add('selected');
+                        }
+                        div.innerHTML = `
+                            <span>${district.name}</span>
+                            <button onclick="deleteDistrict(event, '${district.name}')">Удалить</button>
+                        `;
+                        div.onclick = (e) => {
+                            if (e.target.tagName !== 'BUTTON') {
+                                document.querySelectorAll('#districts-list .selected').forEach(el => el.classList.remove('selected'));
+                                div.classList.add('selected');
+                                selectedDistrict = district.name;
+                                loadTowns();
+                            }
+                        };
+                        list.appendChild(div);
+                    });
+
+                    if (districts.length > 0) {
+                        const prevBtn = document.createElement('button');
+                        prevBtn.textContent = 'Назад';
+                        prevBtn.disabled = page === 0;
+                        prevBtn.onclick = () => loadDistricts(page - 1);
+
+                        const nextBtn = document.createElement('button');
+                        nextBtn.textContent = 'Вперёд';
+                        nextBtn.onclick = () => loadDistricts(page + 1);
+
+                        pagination.appendChild(prevBtn);
+                        pagination.appendChild(nextBtn);
+                    }
+                }
+            })
+            .catch(err => console.error('Ошибка загрузки районов:', err));
+    }
+
+    function loadTowns(page = 0) {
+        if (!selectedDistrict) {
+            document.getElementById('towns-table').querySelector('tbody').innerHTML = '';
+            return;
+        }
+
+        fetch(`${API_BASE}/towns?districtName=${encodeURIComponent(selectedDistrict)}&page=${page}`)
+            .then(response => response.json())
+            .then(towns => {
+                const tbody = document.getElementById('towns-table').querySelector('tbody');
+                tbody.innerHTML = '';
+
+                towns.forEach(town => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${town.name}</td>
+                        <td>${town.type}</td>
+                        <td>${town.population || '-'}</td>
+                        <td>
+                            <button onclick="deleteTown(event, '${town.name}')">Удалить</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки городов:', err));
+    }
+
+
+    function refreshAll() {
+
+        const savedRegion = selectedRegion;
+        const savedDistrict = selectedDistrict;
+
+        selectedRegion = null;
+        selectedDistrict = null;
+
+        document.getElementById('districts-list').innerHTML = '';
+        document.getElementById('towns-table').querySelector('tbody').innerHTML = '';
+
+        loadRegions(regionPage)
+            .then(() => {
+                if (savedRegion) {
+                    selectedRegion = savedRegion;
+                    loadDistricts(districtPage)
+                        .then(() => {
+                            if (savedDistrict) {
+                                selectedDistrict = savedDistrict;
+                                loadTowns();
+                            }
+                        });
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка при полной перезагрузке:', err);
+            });
+    }
+
+    // === Добавление ===
+
+    function addRegion() {
+        const name = document.getElementById('region-name').value.trim();
+        const capital = document.getElementById('region-capital').value.trim();
+
+        if (!name || !capital) {
+            alert('Заполните все поля: название и столица региона.');
+            return;
+        }
+
+        fetch(`${API_BASE}/regions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `name=${encodeURIComponent(name)}&capitalName=${encodeURIComponent(capital)}`
+        })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('region-name').value = '';
+                    document.getElementById('region-capital').value = '';
+                    loadRegions(regionPage);
+                } else {
+                    alert('Ошибка при добавлении региона.');
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка сети:', err);
+                alert('Ошибка сети при добавлении региона.');
+            });
+    }
+
+    function addDistrict() {
+        if (!selectedRegion) {
+            alert('Сначала выберите регион.');
+            return;
+        }
+
+        const name = document.getElementById('district-name').value.trim();
+        if (!name) {
+            alert('Введите название района.');
+            return;
+        }
+
+        fetch(`${API_BASE}/districts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `name=${encodeURIComponent(name)}&regionName=${encodeURIComponent(selectedRegion)}`
+        })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('district-name').value = '';
+                    loadDistricts(districtPage);
+                } else {
+                    alert('Ошибка при добавлении района.');
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка сети:', err);
+                alert('Ошибка сети при добавлении района.');
+            });
+    }
+
+    function addTown() {
+        if (!selectedDistrict) {
+            alert('Сначала выберите район.');
+            return;
+        }
+
+        const name = document.getElementById('town-name').value.trim();
+        const type = document.getElementById('town-type').value.trim();
+        const population = parseInt(document.getElementById('town-population').value);
+
+        if (!name || !type || isNaN(population) || population < 0) {
+            alert('Заполните все поля корректно.');
+            return;
+        }
+
+        fetch(`${API_BASE}/towns`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}&population=${population}&districtName=${encodeURIComponent(selectedDistrict)}`
+        })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('town-name').value = '';
+                    document.getElementById('town-type').value = '';
+                    document.getElementById('town-population').value = '';
+                    loadTowns();
+                } else {
+                    alert('Ошибка при добавлении города.');
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка сети:', err);
+                alert('Ошибка сети при добавлении города.');
+            });
+    }
+
+    // === Удаление ===
+
+    function deleteRegion(event, name) {
+        event.stopPropagation();
+        if (!confirm(`Удалить регион "${name}" и всё его содержимое?`)) return;
+
+        fetch(`${API_BASE}/regions?name=${encodeURIComponent(name)}`, {
+            method: 'DELETE'
+        })
+            .then(response => {
+                if (response.ok) {
+                    if (selectedRegion === name) {
+                        selectedRegion = null;
+                        selectedDistrict = null;
+                        document.getElementById('districts-list').innerHTML = '';
+                        document.getElementById('towns-table').querySelector('tbody').innerHTML = '';
+                    }
+
+                } else {
+                    alert('Ошибка при удалении региона.');
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка сети:', err);
+                alert('Ошибка сети при удалении региона.');
+                loadRegions(regionPage);
+            })
+            .finally(() => {
+                refreshAll();
+            });
+    }
+
+    function deleteDistrict(event, name) {
+        event.stopPropagation();
+        if (!confirm(`Удалить район "${name}"?`)) return;
+
+        fetch(`${API_BASE}/districts?name=${encodeURIComponent(name)}&regionName=${encodeURIComponent(selectedRegion)}`, {
+            method: 'DELETE'
+        })
+            .then(response => {
+                if (response.ok) {
+                    if (selectedDistrict === name) {
+                        selectedDistrict = null;
+                        document.getElementById('towns-table').querySelector('tbody').innerHTML = '';
+                    }
+                } else {
+                    alert('Ошибка при удалении района.');
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка сети:', err);
+                alert('Ошибка сети при удалении района.');
+            }).finally(() => {
+            loadDistricts(districtPage)
+            loadTowns()
+        });
+    }
+
+    function deleteTown(event, name) {
+        event.stopPropagation();
+        if (!confirm(`Удалить город "${name}"?`)) return;
+
+        fetch(`${API_BASE}/towns?name=${encodeURIComponent(name)}&districtName=${encodeURIComponent(selectedDistrict)}&regionName=${encodeURIComponent(selectedRegion)}`, {
+            method: 'DELETE'
+        })
+            .then(response => {
+                if (response.ok) {
+                } else {
+                    alert('Ошибка при удалении города.');
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка сети:', err);
+                alert('Ошибка сети при удалении города.');
+            })
+            .finally(() => {
+                loadTowns(0)
+            });
+    }
+
+    function updateRegion() {
+        const name = document.getElementById('region-name').value.trim();
+        const capital = document.getElementById('region-capital').value.trim();
+        const oldName = selectedRegion;
+
+        if (!name || !capital) {
+            alert('Заполните все поля: название и столица региона.');
+            return;
+        } else if (!oldName) {
+            alert('Выберите регион для обновления.');
+            return;
+        }
+
+        fetch(`${API_BASE}/regions?name=${encodeURIComponent(name)}&capitalName=${encodeURIComponent(capital)}&oldName=${encodeURIComponent(oldName)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('region-name').value = '';
+                    document.getElementById('region-capital').value = '';
+                    loadRegions(regionPage);
+                } else {
+                    alert('Ошибка при обновлении региона.');
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка сети:', err);
+                alert('Ошибка сети при обновлении региона.');
+            });
+    }
+
+    function updateDistrict() {
+        const name = document.getElementById('district-name').value.trim();
+        const oldName = selectedDistrict;
+        const regionName = selectedRegion;
+
+        if (!name) {
+            alert('Заполните все поля: название района.');
+            return;
+        } else if (!oldName || !regionName) {
+            alert('Выберите район для обновления.');
+            return;
+        }
+
+        fetch(`${API_BASE}/districts?name=${encodeURIComponent(name)}&regionName=${encodeURIComponent(regionName)}&oldName=${encodeURIComponent(oldName)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('district-name').value = '';
+                    loadDistricts(0)
+                } else {
+                    alert('Ошибка при обновлении региона.');
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка сети:', err);
+                alert('Ошибка сети при обновлении региона.');
+            });
+    }
+
+    loadRegions(regionPage);
+</script>
+</body>
+</html>

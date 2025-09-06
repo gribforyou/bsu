@@ -1,0 +1,1 @@
+INSERT INTO district (name, region_id) VALUES (?, (SELECT id FROM region WHERE name = ?));

@@ -1,0 +1,1 @@
+DELETE FROM town WHERE name = ? and district_id = (SELECT id FROM district WHERE name = ? AND region_id = (SELECT id FROM region WHERE name = ?));

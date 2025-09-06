@@ -1,0 +1,1 @@
+INSERT INTO town (name, type, population, district_id) VALUES (?, ?, ?, (SELECT id FROM district WHERE name = ?));

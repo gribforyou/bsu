@@ -1,0 +1,1 @@
+DELETE FROM district WHERE name = ? AND region_id = (SELECT id FROM region WHERE name = ?);

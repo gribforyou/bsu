@@ -1,0 +1,1 @@
+INSERT INTO region (name, capital_name) VALUES (?, ?);

@@ -1,0 +1,1 @@
+UPDATE region SET name = ?, capital_name = ? WHERE name = ?;

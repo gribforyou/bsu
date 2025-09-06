@@ -1,0 +1,1 @@
+update district set name = ? where name = ? and region_id = (select id from region where name = ?);
