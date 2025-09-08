@@ -1,0 +1,1 @@
+update town set name = ?, type = ?, population = ? where name = ? and district_id = (select id from district where name = ? and region_id = (select id from region where name = ?));

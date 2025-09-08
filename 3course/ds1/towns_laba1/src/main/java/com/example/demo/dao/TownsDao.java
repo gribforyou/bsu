@@ -25,6 +25,7 @@ public class TownsDao {
     private static final String DELETE_TOWN = ResourceUtils.loadResource("sql/deleteTown.sql");
     private static final String UPDATE_REGION = ResourceUtils.loadResource("sql/updateRegion.sql");
     private static final String UPDATE_DISTRICT = ResourceUtils.loadResource("sql/updateDistrict.sql");
+    private static final String UPDATE_TOWN = ResourceUtils.loadResource("sql/updateTown.sql");
 
     private final JdbcOperations jdbcOperations;
 
@@ -34,6 +35,10 @@ public class TownsDao {
 
     public void updateDistrict(String regionName, String oldDistrictName, String newDistrictName) {
         jdbcOperations.update(UPDATE_DISTRICT, newDistrictName, oldDistrictName, regionName);
+    }
+
+    public void updateTown(String regionName, String districtName, String oldTownName, String newTownName, String newTownType, int newTownPopulation) {
+        jdbcOperations.update(UPDATE_TOWN, newTownName, newTownType, newTownPopulation, oldTownName, districtName, regionName);
     }
 
     public void insertRegion(Region region) {

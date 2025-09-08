@@ -81,4 +81,12 @@ public class TownRestController {
         townsDao.deleteTown(name, districtName, regionName);
         return ResponseEntity.ok().build();
     }
+
+    @PutMapping("/towns")
+    public Town updateTown(@RequestParam String newTownName, @RequestParam String newTownType,
+                           @RequestParam int newTownPopulation, @RequestParam String oldTownName,
+                           @RequestParam String districtName, @RequestParam String regionName) {
+        townsDao.updateTown(regionName, districtName, oldTownName, newTownName, newTownType, newTownPopulation);
+        return new Town(newTownName, newTownType, newTownPopulation);
+    }
 }
